@@ -1,0 +1,546 @@
+- type: custom:stack-in-card
+  cards:
+    - type: custom:button-card
+      name: Camera da letto
+      entity: climate.netatmo_camera_da_letto
+      styles:
+        card:
+          - height: 200px
+        name:
+          - padding-left: 50px
+          - padding-bottom: 400px
+          - font-size: 24px
+          - font-weight: 500
+        custom_fields:
+          bg:
+            - position: absolute
+            - left: 1%
+            - top: 28%
+            - height: 110px
+            - width: 220px
+            - line-height: 165px
+            - border-radius: 4%
+            - background: orange
+            - display: |
+                [[[
+                  if (entity.attributes.hvac_action == 'heat')
+                    return "block";
+                  return "none";
+                ]]]
+          cerchio:
+            - position: absolute
+            - left: 5%
+            - top: 13%
+            - height: 150px
+            - width: 150px
+            - font-size: 50px
+            - font-weight: bold
+            - line-height: 160px
+            - border-radius: 50%
+            - color: black
+            - background: white
+            - border: 3px solid
+            - border-color: gray
+          temperatura_impostata:
+            - position: absolute
+            - left: 14.5%
+            - top: 1%
+            - height: 65px
+            - width: 65px
+            - font-size: 25px
+            - font-weight: bold
+            - line-height: 60px
+            - border-radius: 50%
+            - border: 3px solid
+            - border-color: wite
+            - background-color: >
+                [[[
+                  if (states['climate.netatmo_camera_da_letto'].state == 'auto')
+                    return "#181818";
+                  return "orange";
+                ]]]
+          turn_on:
+            - position: absolute
+            - left: 18%
+            - top: 68%
+            - display: |
+                [[[
+                  if (entity.attributes.hvac_action == 'heat')
+                    return "block";
+                  return "none";
+                ]]]
+          manual:
+            - position: absolute
+            - left: 2%
+            - top: 20%
+            - border-radius: 50%
+            - display: |
+                [[[
+                  if (entity.attributes.preset_mode == 'manual')
+                    return "block";
+                  return "none";
+                ]]]
+          minus:
+            - position: absolute
+            - left: 41%
+            - top: 53%
+          plus:
+            - position: absolute
+            - left: 41%
+            - top: 27%
+          trv:
+            - position: absolute
+            - left: 3%
+            - top: 1%
+          lb_programmazione:
+            - position: absolute
+            - left: 70%
+            - top: 41%
+          programmazione:
+            - position: absolute
+            - left: 58%
+            - top: 30%
+          batteria:
+            - position: absolute
+            - left: 78%
+            - top: 9.5%
+          mensile:
+            - position: absolute
+            - left: 70%
+            - top: 58%
+          annuale:
+            - position: absolute
+            - left: 85%
+            - top: 58%
+          oggi:
+            - position: absolute
+            - left: 58%
+            - top: 58%
+      custom_fields:
+        bg: |
+          [[[
+            return `<img
+              style="width: 1px"
+              src="/local/netatmo/turn_on.png"
+              />`
+          ]]]
+        cerchio: >
+          [[[ return states['climate.netatmo_camera_da_letto'].attributes.current_temperature; ]]]
+        temperatura_impostata: >
+          [[[ return states['climate.netatmo_valve_1'].attributes.temperature; ]]]
+        turn_on: |
+          [[[
+            return `<img
+              style="width: 35px"
+              src="/local/netatmo/turn_on.png"
+              />`
+          ]]]
+        manual: |
+          [[[
+            return `<img
+              style="width: 35px"
+              src="/local/netatmo/manual.png"
+              />`
+          ]]]
+        minus:
+          card:
+            type: custom:button-card
+            icon: mdi:minus
+            color: black
+            styles:
+              card:
+                - height: 60px
+                - width: 60px
+                - background: white
+                - border-radius: 40%
+                - border: 3px solid
+                - border-color: gray
+        plus:
+          card:
+            type: custom:button-card
+            icon: mdi:plus
+            color: black
+            styles:
+              card:
+                - height: 60px
+                - width: 60px
+                - background: white
+                - border-radius: 40%
+                - border: 3px solid
+                - border-color: gray
+            tap_action:
+              action: call-service
+              service: script.temperatura_up
+              service_data:
+                climate_id: climate.netatmo_valve_1
+                value: 0.5
+        trv:
+          card:
+            type: custom:button-card
+            template: no_background
+            label: >
+             [[[
+               return 'TRV: ' + states['climate.netatmo_camera_da_letto'].attributes.heating_power_request + '%';
+             ]]]
+            name: Avvisi
+            show_label: true
+            show_name: false
+            styles:
+              label:
+                - font-size: 12px
+        lb_programmazione:
+          card:
+            type: custom:button-card
+            template: no_background
+            show_label: true
+            label: Programmazione
+            styles:
+              label:
+                - font-size: 13px
+                - font-weight: 500
+                - opacity: 0.65
+        programmazione:
+          card:
+            type: custom:button-card
+            entity: select.netatmo_programmazione
+            template: no_background
+            name: Programmazione
+            layout: icon_name_state
+            show_label: false
+            show_name: true
+            label: Programmazione
+            name: >
+             [[[
+               return states['select.netatmo_programmazione'].state;
+             ]]]
+            icon: mdi:calendar-clock
+            styles:
+              icon:
+                - width: 30px
+              card:
+                - height: 60px
+                - width: 150px
+                - font-size: 13px
+                - font-weight: 400
+                - justify-self: start
+              name:
+                - justify-self: start
+                - font-weight: bold
+                - font-size: 18px
+                - padding-bottom: 15px
+        batteria:
+          card:
+            type: custom:button-card
+            template: no_background
+            entity: sensor.camera_da_letto_battery_percent
+            layout: icon_state
+            show_name: false
+            show_state: true
+            size: 100%
+            styles:
+              card:
+                - height: 24px
+                - width: 60px
+                - font-size: 14px
+                - border-radius: 15%
+                - background: gray
+        mensile:
+          card:
+            type: custom:button-card #Mensile
+            template: no_background
+            entity: sensor.meter_valvola_cameretta_mesile
+            name: MENSILE
+            show_state: true
+            show_icon: false
+            show_name: true
+            show_units: true
+            units: '<span style="font-size: 12px; font-weight: 300">h</span>'
+            styles:
+
+              name:
+                - font-size: 13px
+                - font-weight: 500
+                - opacity: 0.65
+              label:
+                - font-size: 12px
+                - font-weight: 300
+              state:
+                - font-size: 15px
+                - font-weight: bold
+                - padding-top: 5px
+                - padding-bottom: 5px
+            tap_action:
+              action: none
+        annuale:
+          card:
+            type: custom:button-card #Mensile
+            template: no_background
+            entity: sensor.meter_valvola_cameretta_annuale
+            name: ANNUALE
+            show_state: true
+            show_icon: false
+            show_name: true
+            show_units: true
+            units: '<span style="font-size: 12px; font-weight: 300">h</span>'
+            styles:
+              name:
+                - font-size: 13px
+                - font-weight: 500
+                - opacity: 0.65
+              label:
+                - font-size: 12px
+                - font-weight: 300
+              state:
+                - font-size: 15px
+                - font-weight: bold
+                - padding-top: 5px
+                - padding-bottom: 5px
+
+            tap_action:
+              action: none
+        oggi:
+          card:
+            type: custom:button-card #Mensile
+            template: no_background
+            entity: sensor.meter_valvola_camera_da_letto_giornaliero
+            name: OGGI
+            show_state: true
+            show_icon: false
+            show_name: true
+            show_units: true
+            units: '<span style="font-size: 12px; font-weight: 300">h</span>'
+            styles:
+              name:
+                - font-size: 13px
+                - font-weight: 500
+                - opacity: 0.65
+              label:
+                - font-size: 12px
+                - font-weight: 300
+              state:
+                - font-size: 15px
+                - font-weight: bold
+                - padding-top: 5px
+                - padding-bottom: 5px
+            tap_action:
+              action: none
+            tap_action:
+              action: none
+    - type: 'custom:button-card'
+      template: border-bottom
+      variables:
+        margin_bottom: 0
+        margin_top: 0
+
+
+    - type: grid
+      square: false
+      columns: 5
+      cards:
+        - type: custom:button-card #Fuori Casa
+          template: no_background
+          entity: sensor.netatmo_stato_away
+          name: Fuori Casa
+          icon: mdi:home-export-outline
+          size: 25%
+          confirmation:
+            text: "[[[ return 'Passo alla modalità Fuori Casa?' ]]]"
+          styles:
+            name:
+              - font-size: 13px
+              - font-weight: 500
+              - opacity: 0.65
+            icon:
+              - color: >
+                  [[[
+                    if (entity.state == 'away') return 'orange';
+                    else return 'gray';
+                  ]]]
+
+          tap_action:
+            action: call-service
+            service: script.preset_mode
+            service_data:
+              climate_id: climate.netatmo_camera_da_letto
+              preset_mode: away
+
+        - type: custom:button-card #Boost
+          template: no_background
+          entity: climate.netatmo_camera_da_letto
+          name: Boost
+          icon:  mdi:fire-alert
+          size: 25%
+          confirmation:
+            text: "[[[ return 'Passo alla modalità Boost?' ]]]"
+          styles:
+            name:
+              - font-size: 13px
+              - font-weight: 500
+              - opacity: 0.65
+            icon:
+              - color: >
+                  [[[
+                    if (entity.state == 'boost') return 'OliveDrab';
+                    else return 'gray';
+                  ]]]
+
+          tap_action:
+            action: call-service
+            service: script.preset_mode
+            service_data:
+              climate_id: climate.netatmo_camera_da_letto
+              preset_mode: boost
+
+        - type: custom:button-card #Antigelo
+          template: no_background
+          entity: climate.netatmo_camera_da_letto
+          name: Antigelo
+          icon: mdi:snowflake-alert
+          size: 25%
+          confirmation:
+            text: "[[[ return 'Passo alla modalità Antigelo?' ]]]"
+          styles:
+            name:
+              - font-size: 13px
+              - font-weight: 500
+              - opacity: 0.65
+            icon:
+              - color: >
+                  [[[
+                    if (entity.state == 'Fros Guard') return 'OliveDrab';
+                    else return 'gray';
+                  ]]]
+
+          tap_action:
+            action: call-service
+            service: script.preset_mode
+            service_data:
+              climate_id: climate.netatmo_camera_da_letto
+              preset_mode: Frost Guard
+
+        - type: custom:button-card #Programma
+          template: no_background
+          entity: climate.netatmo_camera_da_letto
+          name: Programma
+          icon: mdi:calendar-clock
+          size: 25%
+          confirmation:
+            text: "[[[ return 'Passo alla modalità Programmato?' ]]]"
+          styles:
+            name:
+              - font-size: 13px
+              - font-weight: 500
+              - opacity: 0.65
+            icon:
+              - color: >
+                  [[[
+                    if (entity.state == 'Schedule') return 'OliveDrab';
+                    else return 'gray';
+                  ]]]
+
+          tap_action:
+            action: call-service
+            service: script.preset_mode
+            service_data:
+              climate_id: climate.netatmo_camera_da_letto
+              preset_mode: Schedule
+        # - type: custom:button-card #Mensile
+        #   template: no_background
+        #   entity: sensor.meter_valvola_cameretta_mesile
+        #   name: MENSILE
+        #   show_state: true
+        #   show_icon: false
+        #   show_name: true
+        #   show_label: true
+        #   show_units: true
+        #   units: '<span style="font-size: 12px; font-weight: 300">h</span>'
+        #   styles:
+        #
+        #     name:
+        #       - font-size: 13px
+        #       - font-weight: 500
+        #       - opacity: 0.65
+        #     label:
+        #       - font-size: 12px
+        #       - font-weight: 300
+        #     state:
+        #       - font-size: 15px
+        #       - font-weight: bold
+        #       - padding-top: 5px
+        #       - padding-bottom: 5px
+        #   label: >
+        #    [[[
+        #      return 'Oggi: ' + states['sensor.meter_valvola_cameretta_giornaliero'].state + 'h';
+        #    ]]]
+        #   tap_action:
+        #     action: none
+        #
+        # - type: custom:button-card #Mensile
+        #   template: no_background
+        #   entity: sensor.meter_valvola_cameretta_mesile
+        #   name: MENSILE
+        #   show_state: true
+        #   show_icon: false
+        #   show_name: true
+        #   show_label: true
+        #   show_units: true
+        #   units: '<span style="font-size: 12px; font-weight: 300">h</span>'
+        #   styles:
+        #
+        #     name:
+        #       - font-size: 13px
+        #       - font-weight: 500
+        #       - opacity: 0.65
+        #     label:
+        #       - font-size: 12px
+        #       - font-weight: 300
+        #     state:
+        #       - font-size: 15px
+        #       - font-weight: bold
+        #       - padding-top: 5px
+        #       - padding-bottom: 5px
+        #   label: >
+        #    [[[
+        #      return 'Oggi: ' + states['sensor.meter_valvola_cameretta_giornaliero'].state + 'h';
+        #    ]]]
+        #   tap_action:
+        #     action: none
+        - type: custom:button-card
+          template: no_background
+          entity: binary_sensor.porta_ingresso
+          icon: mdi:window-open-variant
+          size: 25%
+          show_label: true
+          show_name: false
+          show_state: false
+          show_icon: true
+          name: Finestra
+          label: >
+            [[[
+              if (entity.state == 'on') return 'Aperta';
+              else return 'Chiusa';
+            ]]]
+          state:
+            - value: 'off'
+              color: OliveDrab
+            - value: 'on'
+              color: ORANGERed
+          styles:
+            # card:
+            #   - height: 60px
+            #   - width: 75px
+            label:
+              - font-size: 13px
+              - font-weight: 500
+              - opacity: 0.65
+              - padding-top: 4px
+
+- type: vertical-stack
+  cards:
+    - type: custom:button-card
+      entity: select.netatmo_programmazione
+      name: Programmazione
+      label: '[[[ return entity.state]]]'
+      show_label: true
+      show_name: false
+      icon: mdi:calendar-multiple-check
