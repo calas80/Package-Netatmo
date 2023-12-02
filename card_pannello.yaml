@@ -1,0 +1,565 @@
+  type: custom:button-card
+  name: Termostato
+  entity: climate.netatmo_casa
+  show_icon: false
+  triggers_update: all
+  variables:
+    termostato: climate.netatmo_casa_homekit
+    accensione_rientro: input_boolean.accensione_riscaldamenti_al_rientro
+  styles:
+    card:
+      - height: 200px
+    name:
+      - padding-left: 30px
+      - padding-bottom: 600px
+      - font-size: 24px
+      - font-weight: 500
+    custom_fields:
+      quadrato:
+        - position: absolute
+        - left: 15px
+        - top: 13%
+        - height: 150px
+        - width: 155px
+        - font-size: 50px
+        - font-weight: bold
+        - line-height: 160px
+        - border-radius: 15%
+        - color: |
+            [[[
+              if (states[variables.termostato].attributes.temperature == '10') return "gray";
+              else return "black";
+            ]]]
+        - background: |
+            [[[
+              if (states[variables.termostato].attributes.temperature == '10') return "#323232";
+              else if (states[variables.termostato].state == 'unavailable') return "#gray";
+              else return "white";
+            ]]]
+        - border: |
+            [[[
+              if (states[variables.termostato].attributes.temperature == '10') return "2px ridge";
+              else return "3px solid";
+            ]]]
+        - border-color: |
+            [[[
+              if (states[variables.termostato].attributes.temperature == '10') return "GhostWhite";
+              else return "gray";
+            ]]]
+      temperatura_impostata:
+        - position: absolute
+        - left: 55px
+        - top: 2%
+        - height: 70px
+        - width: 70px
+        - font-size: 25px
+        - font-weight: bold
+        - line-height: 60px
+        - border-radius: 25%
+        - border: 3px solid
+        - padding-top: 2px
+        - padding-left: 1px
+        - padding-right: 1px
+        - border-color: |
+            [[[
+              if (states[variables.termostato].attributes.temperature == '10') return "darkGray";
+              else return "gray";
+            ]]]
+        - background-color: >
+            [[[
+              if (entity.state == 'auto') return "#181818";
+              else if (entity.state == 'unavailable') return "gray";
+              else return "orange";
+            ]]]
+        - display: |
+            [[[
+              if (entity.attributes.preset_mode != 'away')
+                return "block";
+              return "none";
+            ]]]
+
+      minus:
+        - position: absolute
+        - left: 40px
+        - top: 150px
+      plus:
+        - position: absolute
+        - left: 100px
+        - top: 150px
+
+      away:
+        - position: absolute
+        - left: 55px
+        - top: 2%
+        - height: 70px
+        - width: 70px
+        - border-radius: 20%
+        - border: 3px solid
+        - background-color: >
+            [[[
+              if (entity.state == 'auto') return "#181818";
+              else if (entity.state == 'unavailable') return "gray";
+              else return "orange";
+            ]]]
+        - display: |
+            [[[
+              if (entity.attributes.preset_mode == 'away')
+                return "block";
+              return "none";
+            ]]]
+
+      accensione_al_rientro:
+        - position: absolute
+        - left: 250px
+        - top: 45px
+      accensione_al_rientro_icona:
+        - position: absolute
+        - left: 258px
+        - top: 49px
+
+      alert_riscaldamenti_accesi:
+        - position: absolute
+        - left: 250px
+        - top: 83px
+      alert_riscaldamenti_accesi_icona:
+        - position: absolute
+        - left: 258px
+        - top: 87px
+
+      away_button:
+        - position: absolute
+        - left: 172.5px
+        - top: 45px
+      frost_guard_button:
+        - position: absolute
+        - left: 172.5px
+        - top: 83px
+      preset_button:
+        - position: absolute
+        - left: 172.5px
+        - top: 121px
+
+      presetprogrammazione:
+        - position: absolute
+        - left: 250px
+        - top: 121px
+      presetprogrammazione_icona:
+        - position: absolute
+        - left: 255px
+        - top: 125px
+
+  custom_fields:
+    quadrato: >
+      [[[ return states[variables.termostato].attributes.current_temperature ]]]
+    temperatura_impostata: >
+      [[[ return states[variables.termostato].attributes.temperature ]]]
+
+    minus:
+      card:
+        type: custom:button-card
+        icon: mdi:minus
+        color: black
+        size: 90%
+        styles:
+          card:
+            - height: 45px
+            - width: 50px
+            - background: white
+            - border-radius: 30%
+            - border: 3px solid
+            - border-color: gray
+          grid:
+            - grid-template-columns: 1fr
+        tap_action:
+          action: call-service
+          service: script.temperatura_down
+          service_data:
+            climate_id: "climate.netatmo_casa_homekit"
+    plus:
+      card:
+        type: custom:button-card
+        icon: mdi:plus
+        color: black
+        size: 90%
+        styles:
+          card:
+            - height: 45px
+            - width: 50px
+            - background: white
+            - border-radius: 30%
+            - border: 3px solid
+            - border-color: gray
+        tap_action:
+          action: call-service
+          service: script.temperatura_up
+          service_data:
+            climate_id: "climate.netatmo_casa_homekit"
+
+    away:
+      card:
+        type: custom:button-card
+        template: no_background
+        icon: mdi:home-export-outline
+        entity: climate.netatmo_casa_homekit
+        show_name: true
+        show_state: false
+        name: '[[[ return entity.attributes.temperature ]]]'
+
+    accensione_al_rientro:
+      card:
+        type: custom:button-card
+        entity: input_boolean.accensione_riscaldamenti_al_rientro
+        label: Accensione rientro
+        show_name: false
+        show_label: true
+        show_icon: false
+        styles:
+          card:
+            - height: 35px
+            - width: 240px
+            - background-color: "#181818"
+            - border-top: 2px solid
+            - border-left: 2px solid
+            - border-bottom: 2px solid
+            - border-top-right-radius: 0px
+            - border-bottom-right-radius: 0px
+            - border-top-left-radius: 10px
+            - border-bottom-left-radius: 10px
+            - border-color: gray
+          label:
+            - font-size: 15px
+            - font-weight: bold
+            - padding-right: 33px
+    accensione_al_rientro_icona:
+      card:
+        type: custom:button-card
+        template: no_background
+        entity: input_boolean.accensione_riscaldamenti_al_rientro
+        icon: mdi:radiator-off
+        show_name: false
+        show_label: false
+        show_icon: true
+        size: 100%
+        styles:
+          card:
+            - height: 25px
+            - width: 25px
+          grid:
+            - grid-template-columns: 1fr
+        state:
+          - value: 'on'
+            icon: mdi:home-import-outline
+            color: whait
+          - value: 'off'
+            icon: mdi:home-off-outline
+
+    alert_riscaldamenti_accesi:
+      card:
+        type: custom:button-card
+        entity: input_boolean.avviso_riscaldamenti_accesi
+        label: Alert riscaldamenti accesi
+        show_name: false
+        show_label: true
+        show_icon: false
+        styles:
+          card:
+            - height: 35px
+            - width: 240px
+            - background-color: "#181818"
+            - border-top: 2px solid
+            - border-left: 2px solid
+            - border-bottom: 2px solid
+            - border-top-right-radius: 0px
+            - border-bottom-right-radius: 0px
+            - border-top-left-radius: 10px
+            - border-bottom-left-radius: 10px
+            - border-color: gray
+          label:
+            - font-size: 15px
+            - font-weight: bold
+            - padding-left: 17px
+        state:
+          - value: 'on'
+            icon: mdi:radiobox-marked
+          - value: 'off'
+            icon: mdi:radiobox-blank
+    alert_riscaldamenti_accesi_icona:
+      card:
+        type: custom:button-card
+        template: no_background
+        entity: input_boolean.avviso_riscaldamenti_accesi
+        icon: mdi:radiator-off
+        show_name: false
+        show_label: false
+        show_icon: true
+        size: 100%
+        styles:
+          card:
+            - height: 25px
+            - width: 25px
+          grid:
+            - grid-template-columns: 1fr
+        state:
+          - value: 'on'
+            icon: mdi:message-badge-outline
+            color: Whait
+          - value: 'off'
+            icon: mdi:cellphone-message-off
+
+    away_button:
+      card:
+        type: custom:button-card
+        template: no_background
+        confirmation:
+          text: '[[[ return `Settare il programma Fuori Casa?` ]]]'
+        entity: script.away
+        icon: mdi:home-export-outline
+        show_name: false
+        show_label: false
+        show_icon: true
+        size: 80%
+        styles:
+          card:
+            - height: 35px
+            - width: 50px
+            - border-top: 2px solid
+            - border-left: 2px solid
+            - border-right: 2px solid
+            - border-bottom: 2px solid
+            - border-top-right-radius: 10px
+            - border-bottom-right-radius: 10px
+            - background-color: "#181818"
+            - border-color: gray
+          grid:
+            - grid-template-columns: 1fr
+          icon:
+            - color: >
+                [[[
+                  if (states['input_boolean.away'].state == 'on')
+                    return "Tomato  ";
+                  return "whait";
+                ]]]
+        tap_action:
+          action: call-service
+          service: script.away
+        hold_action:
+          action: call-service
+          service: script.away_forced
+
+    frost_guard_button:
+      card:
+        type: custom:button-card
+        template: no_background
+        confirmation:
+          text: '[[[ return `Settare il programma Anti Gelo?` ]]]'
+        entity: script.frost_guard
+        icon: mdi:snowflake
+        show_name: false
+        show_label: false
+        show_icon: true
+        size: 80%
+        styles:
+          card:
+            - height: 35px
+            - width: 50px
+            - border-top: 2px solid
+            - border-left: 2px solid
+            - border-right: 2px solid
+            - border-bottom: 2px solid
+            - border-top-right-radius: 10px
+            - border-bottom-right-radius: 10px
+            - background-color: "#181818"
+            - border-color: gray
+          grid:
+            - grid-template-columns: 1fr
+          icon:
+            - color: >
+                [[[
+                  if (states['input_boolean.frost_guard'].state == 'on')
+                    return "Tomato  ";
+                  return "whait";
+                ]]]
+        tap_action:
+          action: call-service
+          service: script.frost_guard
+        hold_action:
+          action: call-service
+          service: script.frost_guard_forced
+
+    preset_button:
+      card:
+        type: custom:button-card
+        entity: script.script.preset_mode
+        confirmation:
+          text: '[[[ return `Settare il programma schedulato?` ]]]'
+        template: no_background
+        icon: mdi:tune-variant
+        name: Preset
+        show_name: false
+        show_label: false
+        show_icon: true
+        styles:
+          card:
+            - height: 35px
+            - width: 50px
+            - border-top: 2px solid
+            - border-left: 2px solid
+            - border-right: 2px solid
+            - border-bottom: 2px solid
+            - border-top-right-radius: 10px
+            - border-bottom-right-radius: 10px
+            - background-color: "#181818"
+            - border-color: gray
+          grid:
+            - grid-template-columns: 1fr
+          icon:
+            - color: >
+                [[[
+                  if (states['input_boolean.preset'].state == 'on')
+                    return "Tomato  ";
+                  return "whait";
+                ]]]
+        tap_action:
+          action: call-service
+          service: script.preset_mode
+        hold_action:
+          action: call-service
+          service: script.preset_mode_forced
+
+    presetprogrammazione:
+      card:
+        type: custom:button-card
+        template: no_background
+        entity: select.programmazioe_termostato
+        icon: mdi:calendar-clock
+        label: "[[[ return 'Programmazione:' + states['select.programmazioe_termostato'].state ]]]"
+        show_name: false
+        show_label: true
+        show_icon: false
+        styles:
+          card:
+            - height: 35px
+            - width: 240px
+            - background-color: "#181818"
+            - border-top: 2px solid
+            - border-left: 2px solid
+            - border-bottom: 2px solid
+            - border-top-right-radius: 0px
+            - border-bottom-right-radius: 0px
+            - border-top-left-radius: 10px
+            - border-bottom-left-radius: 10px
+            - border-color: gray
+          label:
+            - font-size: 15px
+            - font-weight: bold
+            - padding-left: 17px
+        tap_action:
+          action: fire-dom-event
+          browser_mod:
+            service: browser_mod.popup
+            data:
+              card_mod:
+                style:
+                  .: |
+                    :host {
+                      --mdc-dialog-scrim-color: rgba(10,10,10,0.9);
+                      --mdc-dialog-min-height: 50%;
+                      --mdc-dialog-min-width: 10px;
+                      --mdc-dialog-max-width: 110px;
+                    }
+              content:
+                type: vertical-stack
+                cards:
+                  - type: entities
+                    title: Progarmmazione Termostato
+                    show_header_toggle: false
+                    entities:
+
+                      - type: "custom:button-card"
+                        color_type: blank-card
+                        styles:
+                          card:
+                            - width: 500px
+
+                      - entity: select.programmazioe_termostato
+                        name: Scelta programma
+                        secondary_info: last-changed
+
+
+
+
+                        # card:
+                        #   type: custom:button-card
+                        #   template: no_background
+                        #   entity: select.programmazioe_termostato
+                        #   icon: mdi:calendar-clock
+                        #   label: Programmazione
+                        #   layout: icon_name
+                        #   name: >
+                        #     [[[ return  states['select.programmazioe_termostato'].state ]]]
+                        #   show_icon: true
+                        #   show_label: true
+                        #   icon: mdi:calendar-clock
+                        #   styles:
+                        #     card:
+                        #       - width: 150px
+                        #     name:
+                        #       - font-size: 20px
+                        #       - font-weight: Bold
+                        #       - margin-left: -90px
+                        #     label:
+                        #       - font-size: 18px
+                        #       - color: black
+                        #       - margin-top: -8px
+                        #     icon:
+                        #       - height: 23px
+                        #       - margin-TOP: -2px
+                        #   tap_action:
+                        #     action: fire-dom-event
+                        #     browser_mod:
+                        #       service: browser_mod.popup
+                        #       data:
+                        #         card_mod:
+                        #           style:
+                        #             .: |
+                        #               :host {
+                        #                 --mdc-dialog-scrim-color: rgba(10,10,10,0.9);
+                        #                 --mdc-dialog-min-height: 50%;
+                        #                 --mdc-dialog-min-width: 10px;
+                        #                 --mdc-dialog-max-width: 110px;
+                        #               }
+                        #         content:
+                        #           type: vertical-stack
+                        #           cards:
+                        #             - type: entities
+                        #               title: Progarmmazione Termostato
+                        #               show_header_toggle: false
+                        #               entities:
+                        #
+                        #                 - type: "custom:button-card"
+                        #                   color_type: blank-card
+                        #                   styles:
+                        #                     card:
+                        #                       - width: 500px
+                        #
+                        #                 - entity: select.programmazioe_termostato
+                        #                   name: Scelta programma
+                        #                   secondary_info: last-changed
+    presetprogrammazione_icona:
+      card:
+        type: custom:button-card
+        template: no_background
+        entity: input_boolean.avviso_riscaldamenti_accesi
+        icon: mdi:calendar-clock
+        show_name: false
+        show_label: false
+        show_icon: true
+        size: 100%
+        styles:
+          card:
+            - height: 25px
+            - width: 25px
+          grid:
+            - grid-template-columns: 1fr
+          icon:
+            - color: whait
