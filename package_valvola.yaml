@@ -1,0 +1,566 @@
+################################################################################
+##                  Recorder
+################################################
+recorder:
+  include:
+    entities:
+      - sensor.valvola_studio_trv
+
+################################################################################
+##                  Var
+################################################
+var:
+  apertura_finestra_studio:
+    friendly_name: Cambio stato finestra Studio
+  counter_finestra_studio:
+    friendly_name: Cambio stato counter finestra Studio
+  temperatura_valvola_studio:
+    friendly_name: Temperatura valvola Studio
+
+################################################################################
+##                  input_boolean
+################################################
+input_boolean:
+  valvola_studio_controllo_finestra_aperta:
+    name: Controllo finestra aperta
+    icon: mdi:window-open-variant
+  valvola_studio_notifica_finestra_aperta:
+    name: Notifica finestra aperta
+    icon: mdi:message-badge
+  valvola_studio_riattivazione_finestra_chiusa:
+    name: Riattivazione a finestra chiusa
+    icon: mdi:power-cycle
+  valvola_studio_avviso_connessine_persa:
+    name: Avviso connnessione persa
+    icon: mdi:connection
+  valvola_studio_avviso_batteria_scarica:
+    name: Avviso batteria scarica
+    icon: mdi:battery-alert-variant-outline
+  valvola_studio_manual:
+    name: Valvola Studio Manuale
+    icon: mdi:hand-back-right
+  valvola_studio_notifica_vocale_finestra_aperta:
+    name: Valvola studio Avviso vocale
+    icon: mdi:circle-slice-8
+  valvola_studio_notifica_finestra_lasciata_aperta:
+    name: Valvola studio Avviso finestra rimasta aperta
+    icon: mdi:bell-badge
+  valvola_studio_notifica_true_temperature:
+    name: Valvola studio Avviso differenza True Temperature
+    icon: mdi:thermometer-lines
+  valvola_studio_risparmio_notte:
+    name: Risparmio Notturno
+    icon: mdi:weather-night
+
+  finestra_studio_dummy:
+    name: Finestra studio dummy
+    icon: mdi:window-open-variant
+
+##############################################################################
+##                  Input Number
+################################################
+input_number:
+  valvola_studio_ritardo_controllo_finestra_aperta:
+    name: Ritardo spegnimento
+    icon: mdi:timelapse
+    unit_of_measurement: Min
+    min: 1
+    max: 30
+    step: 1
+
+  valvola_studio_ritardo_notifica_finestra_aperta:
+    name: Ritardo Notifica
+    icon: mdi:message-text-clock-outline
+    unit_of_measurement: Min
+    initial: 10
+    min: 5
+    max: 120
+    step: 5
+
+  valvola_studio_avviso_finestra_lasciata_aperta:
+    name: Ritardo Notifica finestra lasciata aperta
+    icon: mdi:account-voice
+    unit_of_measurement: Min
+    initial: 30
+    min: 5
+    max: 240
+    step: 5
+
+################################################################################
+##                  Counter
+################################################
+counter:
+  finestra_studio:
+    initial: 0
+    step: 1
+    icon: mdi:counter
+    restore: true
+
+################################################################################
+##                  Meter
+################################################
+utility_meter:
+  meter_valvola_studio_anno:
+    source: sensor.tempo_valvola_studio
+    cycle: yearly
+  meter_valvola_studio_mese:
+    source: sensor.tempo_valvola_studio
+    cycle: monthly
+  meter_valvola_studio_oggi:
+    source: sensor.tempo_valvola_studio
+    cycle: daily
+
+################################################################################
+##                  Binary Sensor
+################################################
+template:
+  - binary_sensor:
+      - name: "valvola_studio"
+        state: >
+          {{ is_state('sensor.valvola_studio_hvac', 'Accesa') }}
+
+################################################################################
+##                  Sensor
+################################################
+  - sensor:
+      - name: "Tempo valvola studio"
+        unique_id: tempo_valvola_studio
+        state: >-
+          {%if is_state('sensor.valvola_studio_hvac', 'Accesa') and (as_timestamp(states.sensor.valvola_studio_hvac.last_changed)) <= as_timestamp(now())%}
+            {{((as_timestamp(now()) - as_timestamp(states.sensor.valvola_studio_hvac.last_changed))/3600) }}
+          {% else %}
+            0
+          {% endif %}
+        attributes:
+          Oggi: >
+            {% from 'history_stats.jinja' import history %}
+            {{ history(states('sensor.meter_valvola_studio_oggi')) }}
+          Mese: >-
+            {% from 'history_stats.jinja' import history %}
+            {{ history(states('sensor.meter_valvola_studio_mese')) }}
+          Anno: >
+            {% from 'history_stats.jinja' import history %}
+            {{ history(states('sensor.meter_valvola_studio_anno')) }}
+
+      - name: "Valvola studio hvac"
+        unique_id: valvola_studio
+        state: >-
+          {% set valvola = state_attr('climate.valvola_studio', 'hvac_action') %}
+          {% if valvola == 'idle' %}
+            Spenta
+          {% elif valvola == 'heating' %}
+            Accesa
+          {% else %}
+            sconosciuto
+          {% endif %}
+
+      - name: "Valvola studio trv"
+        unique_id: valvola_studio_trv
+        device_class: power_factor
+        unit_of_measurement: '%'
+        state: >
+          {% set valvola = state_attr('climate.valvola_studio', 'hvac_action') %}
+          {% if valvola == 'idle' %}
+            0
+          {% elif valvola == 'heating' %}
+            100
+          {% else %}
+            sconosciuto
+          {% endif %}
+
+      # - name: "Valvola studio trv"
+      #   unique_id: valvola_studio_trv
+      #   device_class: power_factor
+      #   unit_of_measurement: '%'
+      #   state: >
+      #     {% if states('climate.studio.heating_power_request') != 'unavailable' and states('climate.studio.heating_power_request') != 'unknown' %}
+      #       {{ state_attr('climate.studio','heating_power_request') }}
+      #     {% else %}
+      #       Verica
+      #     {% endif %}
+
+      - name: "Last change finestra studio info"
+        unique_id: last_change_finestra_studio_info
+        state: >
+          {%- set var = states('var.apertura_finestra_studio') |int %}
+          {{ var | timestamp_custom('%d/%m/%Y - %H:%M',true | int) }}
+
+      - name: "Last change finestra studio"
+        unique_id: last_change_finestra_studio
+        state: >-
+          {%- set time = (as_timestamp(now()) - as_timestamp(states.binary_sensor.finestra_studio_contact.last_changed)) - 3600 | int  %}
+          {{'Poco fa' if time | timestamp_custom('%M') | int < 1 else time | timestamp_custom('%H:%M', true) }}
+
+      - name: "Ricircolo aria studio"
+        unique_id: 583bd5dd2af44590024345aad4c76335
+        state: >-
+          {% set var = states('var.counter_finestra_studio') |int %}
+          {% set ora = as_timestamp(now()) - 3600 %}
+          {% set ricircolo = (ora - var) | timestamp_custom('%H:%M') %}
+          {% if ricircolo < '03:59' %}
+            Ok
+          {% elif ricircolo >= '04:00' and  ricircolo < '05:59'%}
+            Medio
+          {% elif ricircolo >= '06:00' and  ricircolo < '07:59'%}
+            Grave
+          {% elif ricircolo >= '08:00' %}
+            Urgente
+          {% else %}
+            Errore
+          {% endif %}
+        attributes:
+          tempo: >
+            {%- set var = states('var.counter_finestra_studio') |int %}
+            {% set ora = as_timestamp(now()) - 3600 %}
+            {% set ricircolo = (ora - var) | timestamp_custom('%H:%M') %}
+            {{ricircolo}}
+        icon: mdi:cached
+
+      - name: "Valvola Studio True Temperature"
+        unique_id: valvola_studio_true_temperature
+        state: >
+          {{(state_attr('climate.valvola_studio','current_temperature') |float(0) ) - (states('sensor.temperatura_studio') |float(0) ) |int}}
+
+################################################################################
+##                  AUTOMATION
+###################################################
+automation:
+  - alias: "Conteggio apertura finestra studio"
+    id: 8138709aae8833df686d5b93db4faaaf
+    initial_state: true
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.finestra_studio_contact
+        from: "off"
+        to: "on"
+        id: "variabile"
+      - platform: state
+        id: "conteggio"
+        entity_id: binary_sensor.finestra_studio_contact
+        from: "off"
+        to: "on"
+        for:
+          minutes: 3
+      - platform: time
+        at: "05:00:00"
+        id: "reset"
+    action:
+      - choose:
+          - conditions: # VARIABILE
+              - alias: "VARIABILE"
+                condition: trigger
+                id: "variabile"
+            sequence:
+              - service: var.set
+                data:
+                  entity_id: var.apertura_finestra_studio
+                  value: "{{ as_timestamp(now()) }}"
+
+          - conditions: # CONTEGGIO
+              - alias: "CONTEGGIO"
+                condition: trigger
+                id: "conteggio"
+            sequence:
+              - service: counter.increment
+                target:
+                  entity_id: counter.finestra_studio
+              - service: var.set
+                data:
+                  entity_id: var.counter_finestra_studio
+                  value: "{{ as_timestamp(now()) }}"
+
+          - conditions: # RESET
+              - alias: "RESET"
+                condition: trigger
+                id: "reset"
+            sequence:
+              - service: counter.reset
+                target:
+                  entity_id: counter.finestra_studio
+
+  - alias: "Valvola studio gestione finestra"
+    id: 1edacc6d21bd78049862446bad894c98
+    initial_state: true
+    mode: parallel
+    trigger:
+      - platform: state #FINESTRA APERTA
+        id: "chiusura"
+        entity_id: binary_sensor.finestra_studio_contact
+        from: "off"
+        to: "on"
+        for:
+          minutes: "{{ states('input_number.valvola_studio_ritardo_controllo_finestra_aperta')|int }}"
+
+      - platform: state #FINESTRA CHIUSA
+        id: "apertura"
+        entity_id: binary_sensor.finestra_studio_contact
+        from: "on"
+        to: "off"
+        for:
+          seconds: 15
+
+      - platform: state # NOTIFICA
+        id: "notifica"
+        entity_id: binary_sensor.finestra_studio_contact
+        from: "off"
+        to: "on"
+        for:
+          minutes: "{{ states('input_number.valvola_studio_ritardo_notifica_finestra_aperta')|int(0) +1 }}"
+
+      - platform: state # NOTIFICA FINESTRA LASCIATA APERTA
+        id: "finestra_aperta"
+        entity_id: binary_sensor.finestra_studio_contact
+        from: "off"
+        to: "on"
+        for:
+          minutes: "{{ states('input_number.valvola_studio_avviso_finestra_lasciata_aperta')|int(0) }}"
+    condition:
+      - condition: state
+        entity_id: sensor.netatmo_stato
+        state: "Schedule"
+    action:
+      - choose:
+          - conditions: # CHIUSURA
+              - alias: "CHIUSURA"
+                condition: trigger
+                id: "chiusura"
+              - condition: state
+                entity_id: input_boolean.valvola_studio_controllo_finestra_aperta
+                state: "on"
+            sequence:
+              - service: var.set
+                data:
+                  entity_id: var.temperatura_valvola_studio
+                  value: "{{state_attr('climate.valvola_studio','temperature')}}"
+              - service: climate.set_temperature
+                data:
+                  temperature: 10
+                target:
+                  entity_id: climate.valvola_studio
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.valvola_studio_manual
+
+          - conditions: # APERTURA
+              - alias: "APERTURA"
+                condition: trigger
+                id: "apertura"
+              - condition: state
+                entity_id: input_boolean.valvola_studio_riattivazione_finestra_chiusa
+                state: "on"
+              - condition: template
+                value_template: "{{ states('sensor.netatmo_stato') == 'Schedule' }}"
+            sequence:
+              - service: climate.set_temperature
+                data:
+                  temperature: >
+                    {{ states('var.temperatura_valvola_studio') }}
+                target:
+                  entity_id: climate.valvola_studio
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.valvola_studio_manual
+
+          - conditions: # NOTIFICA
+              - alias: "NOTIFICA"
+                condition: trigger
+                id: "notifica"
+              - condition: state
+                entity_id: input_boolean.valvola_studio_controllo_finestra_aperta
+                state: "on"
+              - condition: state
+                entity_id: input_boolean.valvola_studio_notifica_finestra_aperta
+                state: "on"
+            sequence:
+              - service: script.multinotify
+                data:
+                  notify_app: notify.famiglia
+                  title: "Valvola Studio"
+                  message: "Finestra della studio aperta da {{states('sensor.last_change_finestra_studio')}}."
+                  group: "valvola_studio"
+                  tag: "valvola_studio_apertura"
+
+          - conditions: # NOTIFICA FINESTRA LASCIATA APERTA
+              - alias: "NOTIFICA FINESTRA LASCIATA APERTA"
+                condition: trigger
+                id: "finestra_aperta"
+              - condition: state
+                entity_id: input_boolean.valvola_studio_controllo_finestra_aperta
+                state: "on"
+            sequence:
+              - if:
+                  - condition: state
+                    entity_id: input_boolean.valvola_studio_notifica_vocale_finestra_aperta
+                    state: "on"
+                then:
+                  - service: script.multinotify
+                    data:
+                      notify_app: notify.famiglia
+                      title: "Valvola Studio"
+                      message: >
+                        {% set tempo = states('input_number.valvola_studio_avviso_finestra_lasciata_aperta') |int %}
+                        {{["La finestra della studio è ormai aperta da " ~ tempo ~ "minuti",
+                            "Sono passati già " ~ tempo ~ " minuti da quando hai aperto la finestra della studio!",
+                            "Penso che " ~ tempo ~ " minuti possano bastare. Ora puoi chiudere la finestra della studio",
+                            "Hey, che ne dici di chiudere la finestra della studio?  è aperta da " ~ tempo ~ " minuti",
+                            "Forse hai dimenticato di aver aperto al finestra della studio. L'hai aperta " ~ tempo ~ " minuti fa!",
+                            "Hey," ~ tempo ~ " minuti sono passati. Che ne dici di chiudere la finestra della studio? "] | random}}
+                      alexa_target: media_player.in_casa
+                      alexa_force: true
+                      group: "valvola_studio"
+                      tag: "valvola_studio_apertura"
+
+              - service: script.multinotify
+                data:
+                  notify_app: notify.famiglia
+                  title: "Valvola Studio"
+                  message: >
+                    {% set tempo = states('input_number.valvola_studio_avviso_finestra_lasciata_aperta') |int %}
+                    {{["La finestra della studio è ormai aperta da " ~ tempo ~ "minuti",
+                        "Sono passati già " ~ tempo ~ " minuti da quando hai aperto la finestra della studio!",
+                        "Penso che " ~ tempo ~ " minuti possano bastare. Ora puoi chiudere la finestra della studio",
+                        "Hey, che ne dici di chiudere la finestra della studio?  è aperta da " ~ tempo ~ " minuti",
+                        "Forse hai dimenticato di aver aperto al finestra della studio. L'hai aperta " ~ tempo ~ " minuti fa!",
+                        "Hey," ~ tempo ~ " minuti sono passati. Che ne dici di chiudere la finestra della studio? "] | random}}
+                  tag: "valvola_studio_apertura"
+                  group: "valvola_studio"
+
+  - alias: "Avviso disconnessione valvola studio"
+    id: 3cb2df467c5b9ee1c68377add8bbccc4
+    initial_state: true
+    trigger:
+      - platform: state
+        entity_id: climate.studio
+        to: "unavailable"
+    condition:
+      - condition: state
+        entity_id: input_boolean.valvola_studio_avviso_connessine_persa
+        state: "on"
+    action:
+      - service: !secret notifiche_francesco
+        data:
+          title: 'Attenzione'
+          message: Valvola studio disconnessa.
+
+  - alias: "Avviso True Temperature valvola studio"
+    id: 77071da402b3a5e96033b7e0daf32433
+    initial_state: true
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.valvola_studio_true_temperature
+        above: 1.5
+        for:
+          minutes: 60
+    condition:
+      - condition: state
+        entity_id: input_boolean.valvola_studio_notifica_true_temperature
+        state: "on"
+    action:
+      - service: script.multinotify
+        data:
+          notify_app: !secret notifiche_francesco
+          title: "Valvola Studio"
+          message: >
+            L'offset della valvola è di {{states('sensor.valvola_studio_true_temperature')}}°
+            La temperatura della valvola è {{(state_attr('climate.valvola_studio','current_temperature') |float)}}°, mentre la temperatura ambientiale
+            risulta {{(states('sensor.temperatura_soggiorno') |float) }}°
+          group: "valvola_studio"
+          tag: "true_temperature"
+
+  - alias: "Notifica Batteria scarica valvola studio"
+    id: 5a035c1f3f0cd89404512cffea1af678
+    initial_state: true
+    trigger:
+      - platform: template
+        value_template: >-
+          {{states('sensor.studio_battery_percent') |int(0)  < 15 }}
+        for:
+          minutes: 1
+    condition:
+      - condition: state
+        entity_id: input_boolean.valvola_studio_avviso_batteria_scarica
+        state: "on"
+    action:
+      - service: !secret notifiche_francesco
+        data:
+          title: 'Attenzione'
+          message: Batteria Valvola Studio al {{states('sensor.studio_battery_percent')}}%
+
+  - alias: "Avviso ricambio aria studio"
+    id: ac09ddbdb6b7175f52ee6564308ef727
+    initial_state: true
+    trigger:
+      - platform: state
+        id: "1_ora"
+        entity_id: sensor.ricircolo_aria_studio
+        to: "Urgente"
+        for:
+          hours: 1
+      - platform: state
+        id: "2_ora"
+        entity_id: sensor.ricircolo_aria_studio
+        to: "Urgente"
+        for:
+          hours: 2
+    condition:
+      - condition: time
+        after: "11:00:00"
+        before: "22:30:00"
+        weekday:
+          - mon
+          - tue
+          - wed
+          - thu
+          - fri
+      - condition: state
+        entity_id: input_boolean.valvola_studio_controllo_finestra_aperta
+        state: 'on'
+    action:
+      - choose:
+          - conditions: # 1 ORA
+              - alias: "CHIUSURA"
+                condition: trigger
+                id: "1_ora"
+            sequence:
+              - service: script.multinotify
+                data:
+                  notify_app: notify.famiglia
+                  title: "Ricambio Aria"
+                  message: "In studio la finestra non viene aperta da 9 ore"
+                  group: "valvola_studio"
+                  tag: "valvola_studio_apertura"
+
+          - conditions: # 2 ORE
+              - alias: "CHIUSURA"
+                condition: trigger
+                id: "2_ora"
+            sequence:
+              - service: script.multinotify
+                data:
+                  title: "Valvola studio"
+                  message: >
+                    {{["La finestra della studio non viene aperta da 10 ore",
+                        "Sono passate più di 10 ore da quando è stata cambita l'aria in studio",
+                        "Potresti cambiare l'aria in studio? Non viene fatto da 10 ore",
+                        "Forse hai dimenticato di aprire in studio, sono passate 10 ore da l'ultima volta"] | random}}
+                  alexa_target: media_player.in_casa
+                  alexa_force: true
+
+  - alias: "Pulizia notifiche valvola studio"
+    id: 26397a74d2cfaa52f51aa27d831af8c6
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.finestra_studio_contact
+        from: "on"
+        to: "off"
+    action:
+      - service: notify.mobile_app_francesco
+        data:
+          message: "clear_notification"
+          data:
+            tag: "valvola_studio_apertura"
+      - service: notify.mobile_app_iphone_di_simona
+        data:
+          message: "clear_notification"
+          data:
+            tag: "valvola_studio_apertura"
