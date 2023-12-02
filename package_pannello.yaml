@@ -1,0 +1,324 @@
+################################################################################
+##                  Meter
+################################################
+utility_meter:
+  meter_termostato_anno:
+    source: sensor.tempo_termostato
+    cycle: yearly
+  meter_termostato_mese:
+    source: sensor.tempo_termostato
+    cycle: monthly
+  meter_termostato_oggi:
+    source: sensor.tempo_termostato
+    cycle: daily
+
+################################################################################
+##                  Input Boolean
+###################################################
+input_boolean:
+  frost_guard:
+    name: Antigelo
+  preset:
+    name: Preset
+  away:
+    name: Away
+
+################################################################################
+##                  Group
+################################################
+group:
+  valvole_manuali:
+    name: "Valvole Manuali"
+    entities:
+      - input_boolean.valvola_camera_da_letto_manual
+      - input_boolean.valvola_cameretta_manual
+      - input_boolean.valvola_cucina_manual
+      - input_boolean.valvola_soggiorno_manual
+      - input_boolean.valvola_studio_manual
+
+template:
+################################################################################
+##                  Sensor
+################################################
+  - sensor:
+      - name: Tempo Termostato
+        unique_id: tempo_termostato
+        state: >-
+          {%if is_state('sensor.termostato_hvac', 'Acceso') and (as_timestamp(states.sensor.termostato_hvac.last_changed)) <= as_timestamp(now())%}
+            {{((as_timestamp(now()) - as_timestamp(states.sensor.termostato_hvac.last_changed))/3600) }}
+          {% else %}
+            0
+          {% endif %}
+        attributes:
+          Oggi: >
+            {% set hours = states('sensor.meter_termostato_oggi') | float(0) %}
+            {% set minutes = ((hours % 1) * 60) | int(0) %}
+            {% set hours = (hours - (hours % 1)) | int(0) %}
+            {% if hours|int(0) >0 %}
+              {% if minutes|int(0) <9 %}
+                {{hours}}:0{{minutes}}
+              {% else %}
+                {{hours}}:{{minutes}}
+              {% endif %}
+            {% elif minutes|int(0) <9 %}
+              00:0{{minutes}}
+            {% else %}
+              00:{{minutes}}
+            {% endif %}
+          Mese: >-
+            {% set hours = states('sensor.meter_termostato_mese') | float(0) %}
+            {% set minutes = ((hours % 1) * 60) | int(0) %}
+            {% set hours = (hours - (hours % 1)) | int(0) %}
+            {% set day = ((hours |int /24))|int(0) %}
+            {% if day|int(0) >0 %}
+                {{day}}d {{(hours|int)-(day*24)}}h {{minutes}}m
+              {% elif hours|int(0) >0 %}
+                {% if minutes|int(0) <9 %}
+                  {{hours}}:0{{minutes}}
+                {% else %}
+                  {{hours}}:{{minutes}}
+                {% endif %}
+              {% elif minutes|int(0) <9 %}
+                00:0{{minutes}}
+              {% else %}
+                00:{{minutes}}
+              {% endif %}
+          Anno: >-
+            {% set hours = states('sensor.meter_termostato_anno') | float(0) %}
+            {% set minutes = ((hours % 1) * 60) | int(0) %}
+            {% set hours = (hours - (hours % 1)) | int(0) %}
+            {% set day = ((hours |int /24))|int(0) %}
+            {% if day|int(0) >0 %}
+                {{day}}d {{(hours|int)-(day*24)}}h {{minutes}}m
+              {% elif hours|int(0) >0 %}
+                {% if minutes|int(0) <9 %}
+                  {{hours}}:0{{minutes}}
+                {% else %}
+                  {{hours}}:{{minutes}}
+                {% endif %}
+              {% elif minutes|int(0) <9 %}
+                00:0{{minutes}}
+              {% else %}
+                00:{{minutes}}
+              {% endif %}
+
+      - name: Termostato hvac
+        unique_id: termostato
+        state: >-
+          {% set termostato = state_attr('climate.netatmo_casa_homekit', 'hvac_action') %}
+          {% if termostato == 'idle' %}
+            Spento
+          {% elif termostato == 'heating' %}
+            Acceso
+          {% else %}
+            Errore
+          {% endif %}
+
+      - name: Netatmo stato away
+        unique_id: netatmo_stato
+        state: >-
+          {{ state_attr('climate.netatmo_casa','preset_mode') }}
+
+      - name: Termostato preset mode
+        unique_id: termostato_preset_mode
+        state: >-
+          {% set stato = state_attr('climate.netatmo_casa', 'preset_mode') %}
+          {% if stato == 'away' %}
+            Fuori Casa
+          {% elif stato == 'boost' %}
+            Boost
+          {% elif stato == 'Frost Guard' %}
+            Anti Gelo
+          {% elif stato == 'Schedule' %}
+            {{states('select.programmazioe_termostato')}}
+          {% else %}
+            Relè Offline
+          {% endif %}
+
+      - name: Netatmo stato temperatura
+        unique_id: netatmo_stato_temperatura
+        state: >-
+          {{ state_attr('climate.netatmo_casa','temperature') }}
+
+      - name: netatmo_temperatura_ambiente
+        unique_id: netatmo_temperatura_ambiente
+        unit_of_measurement: '°C'
+        state: >-
+          {{ state_attr('climate.netatmo_casa','current_temperature') }}
+
+################################################################################
+##                  Script
+###################################################
+script:
+  temperatura_up:
+    sequence:
+    - service: climate.set_temperature
+      data:
+        temperature: >
+          {{ state_attr(climate_id, 'temperature') + 0.5 | float }}
+      target:
+        entity_id: "{{ climate_id }}"
+
+  temperatura_down:
+    sequence:
+      - service: climate.set_temperature
+        data:
+          temperature: >
+            {{ state_attr(climate_id, 'temperature') - 0.5 | float }}
+        target:
+          entity_id: "{{ climate_id }}"
+
+  preset_mode:
+    sequence:
+      # - condition: template
+      #   value_template: "{{ states('sensor.netatmo_stato') != 'Schedule' }}"
+      - variables:
+          valvole_manuali: >
+            {{(states.climate)
+            | selectattr('attributes.attribution', 'defined')
+            | selectattr('attributes.attribution', 'eq','Data provided by Netatmo')
+            | rejectattr('attributes.preset_mode', 'eq','Schedule')
+            | map(attribute='name')
+            | list
+            | count }}
+      - condition: template
+        value_template: '{{ valvole_manuali > 0 }}'
+      - service: climate.set_preset_mode
+        data:
+          preset_mode: Schedule
+        target:
+          entity_id: climate.netatmo_casa
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.preset
+
+  frost_guard:
+    sequence:
+      - variables:
+          valvole_antigelo: >
+            {{(states.climate)
+            | selectattr('attributes.attribution', 'defined')
+            | selectattr('attributes.attribution', 'eq','Data provided by Netatmo')
+            | rejectattr('attributes.preset_mode', 'eq','Frost Guard')
+            | map(attribute='name')
+            | list
+            | count }}
+      - condition: template
+        value_template: '{{ valvole_antigelo > 0 }}'
+      - service: climate.set_preset_mode
+        data:
+          preset_mode: "Frost Guard"
+        target:
+          entity_id: climate.netatmo_casa
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.frost_guard
+
+  away:
+    sequence:
+      - condition: template
+        value_template: "{{ states('sensor.netatmo_stato') != 'away' }}"
+      - service: climate.set_preset_mode
+        data:
+          preset_mode: "away"
+        target:
+          entity_id: climate.netatmo_casa
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.away
+
+  preset_mode_forced:
+    sequence:
+      - service: climate.set_preset_mode
+        data:
+          preset_mode: Schedule
+        target:
+          entity_id: climate.netatmo_casa
+      - service: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.preset
+            - input_boolean.away
+            - input_boolean.frost_guard
+
+  frost_guard_forced:
+    sequence:
+      - service: climate.set_preset_mode
+        data:
+          preset_mode: "Frost Guard"
+        target:
+          entity_id: climate.netatmo_casa
+      - service: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.preset
+            - input_boolean.away
+            - input_boolean.frost_guard
+
+  away_forced:
+    sequence:
+      - service: climate.set_preset_mode
+        data:
+          preset_mode: "away"
+        target:
+          entity_id: climate.netatmo_casa
+      - service: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.preset
+            - input_boolean.away
+            - input_boolean.frost_guard
+
+################################################################################
+##                  AUTOMATION
+###################################################
+automation:
+  - alias: "Anti Lag Termostato"
+    id: 01GMZEZWWMEPNTHQ6PMJG5831Q
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id: sensor.netatmo_stato
+        to: ~
+    action:
+      - variables:
+          tigger: "{{ trigger.to_state.state }}"
+          away: input_boolean.away
+          boost: input_boolean.boost
+          frost_guard: input_boolean.frost_guard
+          schedule: input_boolean.preset
+      - alias: "Selezione tipo di evento"
+        choose:
+          - conditions: "{{ tigger == 'away' }}"
+            sequence:
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: "{{ away }}"
+          - conditions: "{{ tigger == 'boost' }}"
+            sequence:
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: "{{ boost }}"
+          - conditions: "{{ tigger == 'Frost Guard' }}"
+            sequence:
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: "{{ frost_guard }}"
+          - conditions: "{{ tigger == 'Schedule' }}"
+            sequence:
+              - service: input_boolean.turn_off
+                target:
+                  entity_id: "{{ schedule }}"
+
+  - alias: "Valvole reset manual"
+    id: 80d0e8021bb240a98a6e7f4f0b763e41
+    trigger:
+      - platform: state
+        entity_id: group.valvole_manuali
+        to: "off"
+    action:
+      - service: climate.set_preset_mode
+        data:
+          preset_mode: Schedule
+        target:
+          entity_id: climate.netatmo_casa
